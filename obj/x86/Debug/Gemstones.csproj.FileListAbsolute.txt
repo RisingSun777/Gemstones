@@ -1,0 +1,8 @@
+D:\C++ Games Projects\Gemstones\Gemstones\bin\Debug\Gemstones.exe
+D:\C++ Games Projects\Gemstones\Gemstones\bin\Debug\Gemstones.pdb
+D:\C++ Games Projects\Gemstones\Gemstones\obj\x86\Debug\Gemstones.Form1.resources
+D:\C++ Games Projects\Gemstones\Gemstones\obj\x86\Debug\Gemstones.Properties.Resources.resources
+D:\C++ Games Projects\Gemstones\Gemstones\obj\x86\Debug\Gemstones.exe
+D:\C++ Games Projects\Gemstones\Gemstones\obj\x86\Debug\Gemstones.pdb
+D:\C++ Games Projects\Gemstones\Gemstones\obj\x86\Debug\Gemstones.csproj.GenerateResource.Cache
+D:\C++ Games Projects\Gemstones\Gemstones\obj\x86\Debug\Gemstones.csprojResolveAssemblyReference.cache
