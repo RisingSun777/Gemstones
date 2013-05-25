@@ -1,5 +1,6 @@
 ﻿using System.Drawing;
 using System.Threading;
+using System;
 
 namespace Gemstones.Board
 {
@@ -29,93 +30,14 @@ namespace Gemstones.Board
             this.index = index;
         }
 
-        public Gem Clone(Gem src) {
-            if (src == null)
-                return null;
-            return new Gem(src.board, src.name, src.bounds, src.index);
-        }
-
-        public void Switch(Gem dst) {
-            Gem temp = Clone(this);
-            this.bounds = dst.bounds;
-            this.index = dst.index;
-            dst.bounds = temp.bounds;
-            dst.index = temp.index;
+        public Gem Clone() {
+            return new Gem(this.board, this.name, this.bounds, this.index);
         }
 
         public void SwitchWithAnimation(Gem dst) {
             Thread thread = new Thread(ThreadSwitchUpdate);
             thread.Name = "SwitchGem";
             thread.Start(dst);
-        }
-
-        public bool HasMatching() {
-            if (!Thread.CurrentThread.Name.Equals("SwitchGem"))
-            {
-                return false;
-            }
-            bool result = false;
-            lock (board.board)
-            {
-                //check matching in row
-                int count = 1;
-                for (int i = 1; i < board.board[index.X].Count; i++)
-                {
-                    if (i < board.board[index.X].Count - 1 && board.board[index.X][i].name.Equals(board.board[index.X][i - 1].name) && !board.board[index.X][i].name.Equals(GemName.Nothing))
-                        count++;
-                    else
-                    {
-                        if (i == board.board[index.X].Count - 1 && board.board[index.X][i].name.Equals(board.board[index.X][i - 1].name) && !board.board[index.X][i].name.Equals(GemName.Nothing))
-                        {
-                            count++;
-                            i++;
-                        }
-                        if (count >= 3)
-                        {
-                            //Do matching
-                            for (decimal fScaleCounter = 1.0m; fScaleCounter >= 0; fScaleCounter -= 0.1m)
-                            {
-                                for (int newCount = count; newCount > 0; newCount--)
-                                    board.board[index.X][i - newCount].SetScaleParameter((float)fScaleCounter);
-                                Thread.Sleep(GameMain.frameRate);
-                            }
-                            result = true;
-                            break;
-                        }
-                        count = 1;
-                    }
-                }
-
-                //check matching in col
-                count = 1;
-                for (int i = 1; i < board.board[index.X].Count; i++)
-                {
-                    if (i < board.board[index.X].Count - 1 && board.board[i][index.Y].name.Equals(board.board[i - 1][index.Y].name) && !board.board[i][index.Y].name.Equals(GemName.Nothing))
-                        count++;
-                    else
-                    {
-                        if (i == board.board[index.X].Count - 1 && board.board[i][index.Y].name.Equals(board.board[i - 1][index.Y].name) && !board.board[i][index.Y].name.Equals(GemName.Nothing))
-                        {
-                            count++;
-                            i++;
-                        }
-                        if (count >= 3)
-                        {
-                            //Do matching
-                            for (decimal fScaleCounter = 1.0m; fScaleCounter >= 0; fScaleCounter -= 0.1m)
-                            {
-                                for (int newCount = count; newCount > 0; newCount--)
-                                    board.board[i - newCount][index.Y].SetScaleParameter((float)fScaleCounter);
-                                Thread.Sleep(GameMain.frameRate);
-                            }
-                            result = true;
-                            break;
-                        }
-                        count = 1;
-                    }
-                }
-            }
-            return result;
         }
 
         public void SetScaleParameter(float num) {
@@ -130,8 +52,6 @@ namespace Gemstones.Board
 
         public void ResetToNothing() {
             name = GemName.Nothing;
-            scaleParameter.X = 1f;
-            scaleParameter.Y = 1f;
         }
 
         public void Draw(Graphics g)
@@ -144,10 +64,10 @@ namespace Gemstones.Board
 
             //If the cursor is hovering, draw the selection. If the gem is selected, draw the selection border
             Point cursor = board.GetTranslatedCursor();
-            if (Helpers.IsWithin(bounds, cursor))
+            if (Helpers.IsWithin(bounds, cursor) && !name.Equals(GemName.Nothing))
             {
                 g.DrawImage(spriteImage, bounds, selectionSpriteLocation, GraphicsUnit.Pixel);
-                DrawInfo(g);
+                //DrawInfo(g);
             }
             if (isSelected)
                 g.DrawImage(spriteImage, bounds, selectedSpriteLocation, GraphicsUnit.Pixel);
@@ -167,27 +87,57 @@ namespace Gemstones.Board
             g.DrawString("Name = " + name.ToString(), font, Brushes.Gold, 600, 100);
             g.DrawString("Index = " + index.ToString(), font, Brushes.Gold, 600, 150);
             g.DrawString("Bounds = " + bounds.ToString(), font, Brushes.Gold, 600, 200);
+            g.DrawString("Scale = " + scaleParameter.ToString(), font, Brushes.Gold, 600, 250);
         }
 
-        private void BoardDataSwap(Gem dst) {
+        public void SwitchPlaceWith(Gem dst) {
+            if (Thread.CurrentThread.Name != "SwitchGem" || dst == null)
+                return;
+
+            int skewX = this.bounds.X - ((Gem)dst).bounds.X;
+            int PixelJump = skewX >= 0 ? 5 : -5;
+            if (skewX != 0)
+                for (int i = 0; i < Math.Abs(skewX); i += Math.Abs(PixelJump))
+                {
+                    this.bounds = new Rectangle(this.bounds.X - PixelJump, this.bounds.Y, size, size);
+                    dst.bounds = new Rectangle(dst.bounds.X + PixelJump, dst.bounds.Y, size, size);
+                    Thread.Sleep(GameMain.frameRate);
+                }
+
+            int skewY = this.bounds.Y - ((Gem)dst).bounds.Y;
+            PixelJump = skewY >= 0 ? 5 : -5;
+            if (skewY != 0)
+                for (int i = 0; i < Math.Abs(skewY); i += Math.Abs(PixelJump))
+                {
+                    this.bounds = new Rectangle(this.bounds.X, this.bounds.Y - PixelJump, size, size);
+                    dst.bounds = new Rectangle(dst.bounds.X, dst.bounds.Y + PixelJump, size, size);
+                    Thread.Sleep(GameMain.frameRate);
+                }
+            BoardDataSwap((Gem)dst);
+        }
+
+        public void BoardDataSwap(Gem dst) {
             lock(board.board) {
             Gem temp = this;
+            //Swap the pointers' values, while maintaining their positions in the board
             board.board[this.index.X][this.index.Y] = board.board[dst.index.X][dst.index.Y];
             board.board[dst.index.X][dst.index.Y] = temp;
 
-            temp = Clone(this);
+            temp = this.Clone();
             this.index = dst.index;
             dst.index = temp.index;
             }
         }
 
-        private void ThreadSwitchUpdate(object dst) {
+        private void ThreadSwitchUpdate(object dst)
+        {
             if (!Thread.CurrentThread.Name.Equals("SwitchGem"))
                 return;
+            board.inGame.IsAbleToClick = false;
+
             lock (board.board)
             {
                 int skewX = this.bounds.X - ((Gem)dst).bounds.X;
-                int skewY = this.bounds.Y - ((Gem)dst).bounds.Y;
                 if (skewX != 0)
                     for (int i = 0; i < size; i += 5)
                     {
@@ -195,6 +145,8 @@ namespace Gemstones.Board
                         ((Gem)dst).bounds = new Rectangle(((Gem)dst).bounds.X + skewX / 14, ((Gem)dst).bounds.Y, size, size);
                         Thread.Sleep(GameMain.frameRate);
                     }
+
+                int skewY = this.bounds.Y - ((Gem)dst).bounds.Y;
                 if (skewY != 0)
                     for (int i = 0; i < size; i += 5)
                     {
@@ -204,7 +156,7 @@ namespace Gemstones.Board
                     }
                 BoardDataSwap((Gem)dst);
 
-                if (!board.CheckAndDoMatching(this, (Gem)dst))
+                if (!board.CheckAndDoMatching())
                 {
                     skewX = this.bounds.X - ((Gem)dst).bounds.X;
                     skewY = this.bounds.Y - ((Gem)dst).bounds.Y;
@@ -225,6 +177,8 @@ namespace Gemstones.Board
                     BoardDataSwap((Gem)dst);
                 }
             }
+
+            board.inGame.IsAbleToClick = true;
         }
     }
 }

@@ -6,10 +6,11 @@ namespace Gemstones.Scene
 {
     public class InGame : IScene, IInputEvent
     {
-        public GameMain main { get; private set; }
         private readonly string name = "Ingame";
-        public GameBoard gameBoard { get; private set; }
         private Bitmap background;
+        public GameMain main { get; private set; }
+        public GameBoard gameBoard { get; private set; }
+        public bool IsAbleToClick = true;
 
         public InGame(GameMain main) {
             this.main = main;
@@ -17,6 +18,7 @@ namespace Gemstones.Scene
         }
 
         public void Draw(Graphics g) {
+            //g.DrawString("Allow mouse clicking: " + IsAbleToClick, new Font("Arial", 12), Brushes.Gold, new Point(800, 500));
             gameBoard.Draw(g);
         }
 
@@ -25,6 +27,8 @@ namespace Gemstones.Scene
         }
 
         public void MouseClicked(MouseEventArgs e) {
+            if (!IsAbleToClick)
+                return;
             switch (e.Button)
             {
                 case System.Windows.Forms.MouseButtons.Left:

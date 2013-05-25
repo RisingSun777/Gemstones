@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Drawing;
+using System.Threading;
 
 namespace Gemstones.Board
 {
@@ -17,7 +16,6 @@ namespace Gemstones.Board
         public Gem currentlySelectedGem;
         private Random random;
         public List<List<Gem>> board { get; private set; }
-        //public Point selected;
 
         public GameBoard(Gemstones.Scene.InGame inGame) {
             this.inGame = inGame;
@@ -31,23 +29,107 @@ namespace Gemstones.Board
             g.DrawRectangle(new Pen(Brushes.Gold, 5), playField);
             g.FillRectangle(new SolidBrush(Color.FromArgb(20, 20, 20)), playField);
 
-            try
-            {
-                foreach (List<Gem> rowList in board)
-                    foreach (Gem gem in rowList)
-                        gem.Draw(g);
-            }
-            catch (InvalidOperationException) { }
+            for (int i = 0; i < board.Count; i++)
+                for (int j = 0; j < board.Count; j++)
+                    board[i][j].Draw(g);
 
             g.ResetTransform();
         }
 
-        public bool CheckAndDoMatching(Gem src, Gem dst) {
-            bool result;
-            result = src.HasMatching();
-            result |= dst.HasMatching();
+        private HashSet<Gem> GetGemsToBeDestroyed(){
+            HashSet<Gem> gemsToBeDestroyed = new HashSet<Gem>();
+            int rowCount = 1, colCount = 1;
+            //Row checking
+            for (int i = 0; i < board.Count; i++)
+                for (int j = 1; j < board.Count; j++ ) {
+                    if (!board[i][j].name.Equals(GemName.Nothing))
+                        if (board[i][j].name.Equals(board[i][j - 1].name)) {
+                            rowCount++;
+                            if (j < board.Count - 1)
+                                continue;
+                            j++;
+                        }
+                    if (rowCount >= 3)
+                        while (rowCount > 0) {
+                            gemsToBeDestroyed.Add(board[i][j - rowCount]);
+                            rowCount--;
+                        }
+                    rowCount = 1;
+                }
+            //Col checking
+            for (int j = 0; j < board.Count; j++)
+                for (int i = 1; i < board.Count; i++) {
+                    if (!board[i][j].name.Equals(GemName.Nothing))
+                        if (board[i][j].name.Equals(board[i - 1][j].name)) {
+                            colCount++;
+                            if (i < board.Count - 1)
+                                continue;
+                            i++;
+                        }
+                    if (colCount >= 3)
+                        while (colCount > 0) {
+                            gemsToBeDestroyed.Add(board[i - colCount][j]);
+                            colCount--;
+                        }
+                    colCount = 1;
+                }
+            return gemsToBeDestroyed;
+        }
+
+        private void FillNothingWithNewGems() { 
+            //Scan the board upwards, if there is an empty cell, move gems that are above that cell down
+            for (int i = board.Count - 1; i >= 0; i--)
+                for (int j = 0; j < board.Count; j++) {
+                    if (!board[i][j].name.Equals(GemName.Nothing))
+                        continue;
+
+                    int tempRow = i;
+                    int tempCount = 0;
+                    while (tempRow >= 0 && board[tempRow--][j].name.Equals(GemName.Nothing))
+                        tempCount++;
+
+                    for (tempRow = i - tempCount; tempRow >= 0; tempRow--)
+                    {
+                        board[tempRow][j].SwitchPlaceWith(board[tempRow + tempCount][j]);
+                    }
+                }
+            //create new random gems
+            HashSet<Gem> nothingList = new HashSet<Gem>();
+            for (int i = 0; i < board.Count; i++)
+                for (int j = 0; j < board.Count; j++)
+                    if (board[i][j].name == GemName.Nothing)
+                        nothingList.Add(board[i][j]);
+            SetNewGemsFromList(nothingList);
+            //Check for matching again
+            CheckAndDoMatching();
+        }
+
+        private void SetNewGemsFromList(HashSet<Gem> nothingList)
+        {
+            foreach (Gem gem in nothingList)
+                gem.name = (GemName)random.Next(6);
+            for (decimal scale = 0.1m; scale <= 1; scale += 0.1m)
+            {
+                foreach (Gem gem in nothingList)
+                    gem.SetScaleParameter((float)scale);
+                System.Threading.Thread.Sleep(GameMain.frameRate);
+            }
+        }
+
+        public bool CheckAndDoMatching() {
+            HashSet<Gem> gemsToBeDestroyed = GetGemsToBeDestroyed();
+            if (gemsToBeDestroyed.Count == 0 || gemsToBeDestroyed == null)
+                return false;
+
+            for (decimal scale = 1.0m; scale > 0; scale -= 0.1m)
+            {
+                foreach (Gem gem in gemsToBeDestroyed)
+                    gem.SetScaleParameter((float)scale);
+                System.Threading.Thread.Sleep(GameMain.frameRate);
+            }
             ResetZeroScaleToNothing();
-            return result;
+            FillNothingWithNewGems();
+            return true;
         }
 
         public Point GetTranslatedCursor() {
@@ -91,7 +173,7 @@ namespace Gemstones.Board
             }
         }
 
-        public void ResetZeroScaleToNothing() { 
+        private void ResetZeroScaleToNothing() { 
             foreach(List<Gem> list in board)
                 foreach (Gem gem in list) {
                     if (gem.scaleParameter.X < 1f)

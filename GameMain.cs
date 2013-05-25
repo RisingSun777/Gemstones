@@ -30,7 +30,7 @@ namespace Gemstones
 
         public GameMain(Form form) {
             this.form = form;
-
+            
             form.Location = new Point(150, 0);
             form.Text = title;
             form.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
@@ -78,13 +78,13 @@ namespace Gemstones
         public void Update() {
             if (device == null)
                 return;
-
+            
             device.Clear(Color.Black);
 
             //update cursor location
             cursorLocation = GetCursorLocation();
 
-            currentScene.Draw(device);
+            currentScene.Draw(device);           
             //DrawCursorLocation();
 
             pb.Invalidate();
